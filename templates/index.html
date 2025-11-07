@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Status das Unidades</title>
+<style>
+  /* ===== VARIÁVEIS ===== */
+  :root{
+    --bg: #0f1724;
+    --surface: #0b1220;
+    --muted: #9aa7b2;
+    --text: #e6f0f6;
+    --accent: #2ea7ff;
+    --accent-2: #7be0ff;
+    --success: #22c55e;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --card-radius: 14px;
+    --shadow: 0 10px 30px rgba(2,6,23,0.6);
+    --scroll-thumb: rgba(255,255,255,.12);
+    --scroll-track: #071018;
+  }
+
+  .light-mode{
+    --bg: #f6f8fb;
+    --surface: #ffffff;
+    --muted: #6b7280;
+    --text: #0f1724;
+    --accent: #0a6cf0;
+    --accent-2: #6dd3ff;
+    --card-radius: 14px;
+    --shadow: 0 8px 20px rgba(12,18,32,0.06);
+    --scroll-thumb: rgba(0,0,0,.24);
+    --scroll-track: #f5f7fa;
+  }
+
+  /* ===== RESET / BASE (Força fundo) ===== */
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;
+    height:100%;
+    min-height:100vh;
+    font-family: Inter, "Segoe UI", Tahoma, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    transition: background .18s, color .18s;
+    background-color: var(--bg) !important;
+    background-image: none !important;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+  html { background-color: var(--bg) !important; background-image: none !important; }
+
+  main { min-height:100vh; padding:28px 20px 60px; display:flex; align-items:flex-start; justify-content:center; }
+
+  /* custom scrollbar */
+  html { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) var(--scroll-track); }
+  *::-webkit-scrollbar{ width:10px; height:10px }
+  *::-webkit-scrollbar-track{ background:var(--scroll-track) }
+  *::-webkit-scrollbar-thumb{ background:var(--scroll-thumb); border-radius:10px; border:2px solid var(--scroll-track) }
+
+  /* remove pseudo backgrounds that may leak */
+  body::before, body::after, *::before, *::after {
+    content: none !important;
+    background: transparent !important;
+    background-image: none !important;
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  /* ===== CABEÇALHO ===== */
+  .topbar{
+    width:100%; max-width:1200px; margin:0 auto 20px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:12px 18px; border-radius:12px;
+    background-color: var(--surface) !important;
+    box-shadow: var(--shadow);
+    background-image: none !important;
+    transform: none !important;
+    background-clip: padding-box;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; min-width:0 }
+  .brand .logo{ width:56px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; overflow:hidden; background-color: rgba(255,255,255,0.01) }
+  .brand .logo img{ width:100%; height:100%; object-fit:contain; display:block }
+  .brand h1{ margin:0; font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .brand p{ margin:0; font-size:12px; color:var(--muted) }
+
+  .actions{ display:flex; align-items:center; gap:10px; margin-left:auto }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px;
+    background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.04); cursor:pointer; font-weight:700; text-decoration:none;
+    transition: transform .12s ease, background .12s, box-shadow .12s;
+  }
+  .btn:hover{ transform:translateY(-3px) }
+  .btn.primary { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#03202b; border:none; box-shadow: 0 8px 24px rgba(46,167,255,0.12) }
+  .btn.ghost { background: rgba(255,255,255,0.02) }
+  .theme-toggle{ padding:8px 12px; border-radius:999px; display:flex; gap:8px; align-items:center }
+  .theme-toggle .ico{ width:20px; height:20px; display:inline-grid; place-items:center; border-radius:6px; background: rgba(255,255,255,0.02) }
+
+  /* ===== CONTEÚDO ===== */
+  .card{
+    width:100%; max-width:1100px; border-radius:14px; padding:26px;
+    background-color: var(--surface) !important;
+    box-shadow: var(--shadow);
+    background-image: none !important;
+    transform: none !important;
+    background-clip: padding-box;
+  }
+  .card h1{ margin:0 0 6px 0; font-size:20px; font-weight:700; color:var(--text) }
+  .lead{ margin:0 0 18px 0; color:var(--muted); font-size:13px }
+
+  .columns{ display:grid; grid-template-columns: 1fr 380px; gap:20px; align-items:start }
+  .left-column{ display:flex; flex-direction:column; gap:16px }
+  .panel{
+    border-radius:12px; padding:14px;
+    background-color: rgba(255,255,255,0.02);
+    backface-visibility:hidden;
+    box-shadow: 0 8px 18px rgba(2,6,23,0.08);
+  }
+  .section-header{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px }
+  .section-header h2{ margin:0; font-size:16px; color:var(--text) }
+  .section-header .muted{ font-size:12px; color:var(--muted) }
+
+  .unit-list{ list-style:none; padding:0; margin:0 }
+  .unit-list.bases{ columns:2; column-gap:12px }
+  .unit-item{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; margin:0 0 10px 0;
+    border-radius:10px; background:transparent; color:var(--text);
+    transition: transform .18s ease, background .18s ease, opacity .28s ease;
+    transform: translateY(8px); opacity:0;
+    break-inside:avoid; -webkit-column-break-inside:avoid;
+  }
+  .unit-item.appear{ transform: translateY(0); opacity:1 }
+  .unit-item:hover{ background: rgba(255,255,255,0.02); transform: translateX(6px) }
+
+  .status-dot{ width:12px; height:12px; border-radius:50%; flex:0 0 12px }
+  .green{ background:var(--success) }
+  .yellow{ background:var(--warn) }
+  .red{ background:var(--danger) }
+
+  .right-column{ display:flex; flex-direction:column; gap:12px }
+  .compact{ padding:12px; border-radius:10px; background-color: rgba(255,255,255,0.02); box-shadow:none }
+
+  .small-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px }
+  .small-list li{ display:flex; justify-content:space-between; color:var(--muted); font-size:14px }
+
+  @media (max-width:1000px){ .columns{ grid-template-columns:1fr } .unit-list.bases{ columns:1 } }
+  @media (max-width:520px){ .topbar{ padding:10px } .brand h1{ font-size:15px } .btn{ padding:8px 10px } }
+
+  /* ===== RODAPÉ ===== */
+  footer.site-footer{
+    width:100%;
+    background-color: var(--surface);
+    color: var(--muted);
+    border-top: 1px solid rgba(255,255,255,0.03);
+    box-shadow: 0 -6px 18px rgba(2,6,23,0.08);
+  }
+  .footer-inner{
+    max-width:1200px;
+    margin:0 auto;
+    padding:18px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .footer-left{display:flex;flex-direction:column;gap:6px}
+  .footer-left .label{ font-weight:700; color:var(--text); font-size:14px }
+  .authors{ display:flex; gap:12px; flex-wrap:wrap; margin-top:6px }
+  .author{
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+    padding:6px 10px;
+    border-radius:999px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    color:var(--text);
+    font-size:13px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  }
+  .footer-right{ text-align:right; color:var(--muted); font-size:13px }
+  .footer-right .copy{ display:block; color:var(--muted); font-size:13px }
+  .footer-right .year{ font-weight:700; color:var(--text) }
+
+  @media (max-width:720px){
+    .footer-inner{ flex-direction:column; align-items:flex-start; }
+    .footer-right{ align-self:stretch; width:100%; text-align:left; margin-top:8px }
+  }
+
+  /* ===== APP VERSION BADGE (adicionado) ===== */
+  .app-version-badge{
+    position: fixed;
+    right: 14px;
+    bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    padding: 6px 10px;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+    z-index: 9999;
+    pointer-events: none; /* não atrapalha clique */
+    user-select: none;
+    backdrop-filter: blur(3px);
+  }
+</style>
+</head>
+<body>
+  <div class="topbar" role="banner" aria-label="Cabeçalho">
+    <div class="brand">
+      <div class="logo">
+        <img id="logo-img" src="{{ url_for('static', filename='images/logo_inovatus.png') }}" alt="Inovatus Sistemas">
+      </div>
+      <div class="title">
+        <h1>Monitoramento — Status das Unidades</h1>
+        <p class="muted">Atualização em tempo real · Bases & Hospitais</p>
+      </div>
+    </div>
+
+    <div class="actions" role="navigation" aria-label="Ações">
+      <button id="themeBtn" class="btn ghost theme-toggle" aria-pressed="false" title="Alternar tema">
+        <span class="ico" id="theme-icon">🌙</span>
+        <span>Tema</span>
+      </button>
+
+      <a class="btn" href="/graficos">📊 Gráficos</a>
+      <a class="btn primary" href="/download-relatorio">📄 Relatório</a>
+    </div>
+  </div>
+
+  <main>
+    <section class="card" aria-labelledby="title">
+      <h1 id="title">Status das Unidades</h1>
+      <p class="lead">Lista de bases ambulatoriais e hospitais — atualiza automaticamente a cada 4 segundos.</p>
+
+      <div class="columns">
+        <div class="left-column">
+          <div class="panel" aria-labelledby="bases-title">
+            <div class="section-header">
+              <h2 id="bases-title">Bases</h2>
+              <div class="muted">Ambulatoriais</div>
+            </div>
+            <ul id="bases-list" class="unit-list bases" aria-live="polite"></ul>
+          </div>
+
+          <div class="panel" aria-labelledby="hosp-title">
+            <div class="section-header">
+              <h2 id="hosp-title">Hospitais</h2>
+            </div>
+            <ul id="hospitais-list" class="unit-list"></ul>
+          </div>
+        </div>
+
+        <aside class="right-column" aria-label="Resumo e legenda">
+          <div class="compact">
+            <strong>Resumo</strong>
+            <ul class="small-list" style="margin-top:8px">
+              <li><span>Total de unidades</span><span id="total-units">—</span></li>
+              <li><span>Quedas (atuais)</span><span id="total-quedas">0</span></li>
+              <li><span>Oscilações (atuais)</span><span id="total-oscs">0</span></li>
+            </ul>
+          </div>
+
+          <div class="compact">
+            <strong>Legenda</strong>
+            <ul class="small-list" style="margin-top:8px">
+              <li><span><span class="status-dot green" style="margin-right:8px"></span> Online</span><span>OK</span></li>
+              <li><span><span class="status-dot yellow" style="margin-right:8px"></span> Oscilando</span><span>Verificar</span></li>
+              <li><span><span class="status-dot red" style="margin-right:8px"></span> Offline</span><span>Alerta</span></li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer class="site-footer" role="contentinfo" aria-label="Rodapé">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <div class="label">Desenvolvido por</div>
+        <div class="authors" aria-hidden="false">
+          <span class="author">Ruberval Batista</span>
+          <span class="author">Ruan Cavalcante</span>
+          <span class="author">Ivan Voidaleski</span>
+          <span class="author">João Victor</span>
+        </div>
+      </div>
+
+      <div class="footer-right">
+        <span class="copy">© <span class="year"></span><span id="cur-year"></span> Inovatus Sistemas</span>
+        <small style="display:block;margin-top:6px;color:var(--muted)">Projeto acadêmico · Monitoramento de unidades</small>
+      </div>
+    </div>
+  </footer>
+
+  <!-- BADGE: Versão do sistema (estético, fixo) -->
+  <div class="app-version-badge" role="status" aria-label="Versão do sistema">Versão 1.0</div>
+
+<script>
+  // insere ano atual no rodapé
+  document.getElementById('cur-year').textContent = (new Date()).getFullYear();
+
+  /* THEME MANAGEMENT (persist) */
+  const THEME_KEY = 'monit_theme';
+  const btn = document.getElementById('themeBtn');
+  const icon = document.getElementById('theme-icon');
+
+  function applyTheme(theme){
+    if(theme === 'light') document.body.classList.add('light-mode');
+    else document.body.classList.remove('light-mode');
+
+    document.documentElement.style.backgroundColor = getComputedStyle(document.body).getPropertyValue('--bg');
+    document.body.style.backgroundColor = getComputedStyle(document.body).getPropertyValue('--bg');
+
+    icon.textContent = theme === 'light' ? '☀️' : '🌙';
+    btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+    localStorage.setItem(THEME_KEY, theme);
+  }
+
+  (function initTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    const theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
+    applyTheme(theme);
+  })();
+
+  btn.addEventListener('click', () => {
+    const current = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+  });
+
+  /* DADOS / RENDER - mantive sua lógica simplificada */
+  async function fetchData(){
+    try {
+      const res = await fetch('/data', { cache: 'no-store' });
+      if(!res.ok) throw new Error('fetch error');
+      return await res.json();
+    } catch (e) {
+      console.warn('fetch /data erro', e);
+      return { status_colors: {} };
+    }
+  }
+
+  async function renderList(colors){
+    const bases = document.getElementById("bases-list");
+    const hosp = document.getElementById("hospitais-list");
+    bases.innerHTML = ""; hosp.innerHTML = "";
+
+    let totalUnits=0, totalQuedas=0, totalOscs=0;
+    let baseIndex=0,hospIndex=0;
+    for(const [unit,color] of Object.entries(colors || {})){
+      totalUnits++;
+      const li = document.createElement('li');
+      li.className = 'unit-item';
+      const dot = document.createElement('span'); dot.className = `status-dot ${color}`;
+      const label = document.createElement('div'); label.style.flex='1'; label.textContent=unit;
+      li.append(dot,label);
+      if(unit.startsWith('Hospital')){ hosp.appendChild(li); setTimeout(()=>li.classList.add('appear'), hospIndex*35); hospIndex++; }
+      else { bases.appendChild(li); setTimeout(()=>li.classList.add('appear'), baseIndex*30); baseIndex++; }
+      if(color==='red') totalQuedas++; if(color==='yellow') totalOscs++;
+    }
+    document.getElementById('total-units').textContent = totalUnits||'—';
+    document.getElementById('total-quedas').textContent = totalQuedas||'0';
+    document.getElementById('total-oscs').textContent = totalOscs||'0';
+  }
+
+  async function update(){ const data = await fetchData(); await renderList(data.status_colors || {}); }
+  update(); setInterval(update, 4000);
+</script>
+</body>
+</html>

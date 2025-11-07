@@ -1,0 +1,5 @@
+﻿Flask==2.2.5
+gunicorn
+requests==2.32.3
+pytz==2025.2
+Werkzeug==2.2.3

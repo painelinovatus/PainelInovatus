@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gráficos em Tempo Real — Bases / Hospitais</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* THEME VARS (padrão = DARK) */
+  :root{
+    --bg: #0f1724;
+    --surface: #0b1220;
+    --muted: #9aa7b2;
+    --text: #e6f0f6;
+    --accent: #2ea7ff;
+    --accent-2: #7be0ff;
+    --card-radius: 14px;
+    --glass: rgba(255,255,255,0.02);
+    --shadow: 0 10px 30px rgba(2,6,23,0.6);
+    --input-bg: #0f1724;
+    --input-border: rgba(255,255,255,0.04);
+    --select-arrow: rgba(255,255,255,0.28);
+    --scroll-thumb: rgba(255,255,255,.12);
+    --scroll-track: #071018;
+  }
+  body.light-mode{
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --muted: #6b7280;
+    --text: #0f1724;
+    --accent: #0a6cf0;
+    --accent-2: #6dd3ff;
+    --glass: rgba(255,255,255,0.6);
+    --shadow: 0 10px 30px rgba(12,18,32,0.08);
+    --input-bg: #fff;
+    --input-border: #d1d5db;
+    --select-arrow: rgba(15,23,36,0.6);
+    --scroll-thumb: rgba(0,0,0,.24);
+    --scroll-track: #f5f7fa;
+  }
+
+  /* BASE */
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:Inter, "Segoe UI", Tahoma, sans-serif;
+    background:var(--bg) !important;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    transition:background .25s,color .25s;
+    min-height:100vh;
+  }
+  main{min-height:calc(100vh - 160px); padding:22px 18px; display:flex; align-items:flex-start; justify-content:center;}
+
+  /* scrollbar */
+  html { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) var(--scroll-track); }
+  *::-webkit-scrollbar{ width:10px;height:10px }
+  *::-webkit-scrollbar-track{ background:var(--scroll-track) }
+  *::-webkit-scrollbar-thumb{ background:var(--scroll-thumb); border-radius:10px; border:2px solid var(--scroll-track) }
+
+  /* safety remove pseudo backgrounds */
+  *::before, *::after, html::before, html::after { background: transparent !important; content: none !important; }
+
+  /* TOPBAR */
+  .topbar{
+    width:100%; max-width:1200px; margin:0 auto 16px; padding:10px 14px; border-radius:12px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background: linear-gradient(90deg, color-mix(in srgb,var(--accent) 8%, transparent), transparent), var(--surface);
+    box-shadow:var(--shadow);
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand .logo{width:56px;height:40px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent}
+  .brand .logo img{width:100%;height:100%;object-fit:contain;display:block}
+  .brand .title{display:flex;flex-direction:column;min-width:0}
+  .brand h1{margin:0;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{margin:0;font-size:12px;color:var(--muted)}
+
+  .actions{display:flex;align-items:center;gap:10px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:transparent;color:var(--text);border:1px solid var(--input-border);cursor:pointer;text-decoration:none;font-weight:700;transition:transform .12s}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#03202b;border:none;box-shadow:0 8px 24px rgba(10,108,240,0.12)}
+  .btn.ghost{background:transparent}
+
+  /* GRID: 2 charts side by side + summary */
+  .page{width:100%;max-width:1200px;margin:0 auto;padding:0 12px}
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr 360px;
+    gap:18px;
+    align-items:start;
+  }
+  @media(max-width:1100px){ .grid{ grid-template-columns: 1fr; } }
+
+  .chart-card{
+    border-radius:12px;
+    padding:12px;
+    background:var(--surface);
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .chart-head{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .chart-head h2{ margin:0; font-size:15px; color:var(--text) }
+  .controls{ min-width:220px }
+  select{
+    width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--input-border);
+    background:var(--input-bg); color:var(--text); box-sizing:border-box; appearance:none; -webkit-appearance:none;
+    padding-right:40px; font-weight:600; outline:none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--select-arrow) 50%),
+      linear-gradient(135deg, var(--select-arrow) 50%, transparent 50%),
+      linear-gradient(to right, transparent, transparent);
+    background-position:
+      calc(100% - 18px) calc(50% - 3px),
+      calc(100% - 13px) calc(50% - 3px),
+      100% 0;
+    background-size:8px 8px,8px 8px,12px 100%;
+    background-repeat:no-repeat;
+  }
+  select:focus{ box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 12%, transparent) }
+
+  .canvas-wrap{border-radius:10px;overflow:hidden;background:var(--surface);padding:8px;box-shadow:0 8px 18px rgba(2,6,23,0.03)}
+  canvas#chart-bases, canvas#chart-hosp{ width:100% !important; height:380px !important; display:block; border-radius:8px; background:transparent }
+  @media(max-width:520px){ canvas#chart-bases, canvas#chart-hosp{ height:320px !important } }
+
+  /* SUMMARY */
+  .summary{ display:flex; flex-direction:column; gap:12px }
+  .info{ padding:12px; border-radius:10px; background:linear-gradient(180deg, color-mix(in srgb,var(--surface) 96%, transparent), transparent); font-size:14px }
+  .info strong{ display:block; margin-bottom:8px }
+  .small-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px }
+  .small-list li{ display:flex; justify-content:space-between; color:var(--muted) }
+  .kv{ font-weight:700; color:var(--text) }
+
+  /* FOOTER */
+  footer.site-footer{
+    width:100%;
+    background-color: var(--surface);
+    color: var(--muted);
+    border-top: 1px solid rgba(255,255,255,0.03);
+    box-shadow: 0 -6px 18px rgba(2,6,23,0.08);
+    margin-top:28px;
+  }
+  .footer-inner{
+    max-width:1200px; margin:0 auto; padding:14px 18px; display:flex; gap:16px; align-items:center; justify-content:space-between;
+  }
+  .authors{ display:flex; gap:12px; flex-wrap:wrap }
+  .author{ display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); color:var(--text); font-size:13px }
+
+  @media(max-width:720px){ .footer-inner{ flex-direction:column; align-items:flex-start } .footer-inner .right{ margin-top:8px; } }
+
+  /* ===== APP VERSION BADGE ===== */
+  .app-version-badge{
+    position: fixed;
+    right: 14px;
+    bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    padding: 6px 10px;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+    z-index: 9999;
+    pointer-events: none; /* não atrapalha clique */
+    user-select: none;
+    backdrop-filter: blur(3px);
+  }
+</style>
+</head>
+
+<body>
+  <header class="topbar" role="banner" aria-label="Cabeçalho">
+    <div class="brand">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='images/logo_inovatus.png') }}" alt="Logo">
+      </div>
+      <div class="title">
+        <h1>Gráficos em Tempo Real</h1>
+        <p class="muted">Bases & Hospitais · atualização automática</p>
+      </div>
+    </div>
+
+    <nav class="actions" role="navigation" aria-label="Ações">
+      <button id="themeBtn" class="btn ghost" title="Alternar tema" aria-pressed="false">
+        <span id="theme-icon">🌙</span><span>Tema</span>
+      </button>
+
+      <a class="btn" href="/">📊 Status</a>
+      <a class="btn primary" href="/download-relatorio">📄 Baixar Relatório</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div class="grid" role="main">
+      <div class="chart-card" aria-label="Gráfico de Bases">
+        <div class="chart-head">
+          <h2>Bases Ambulatoriais</h2>
+          <div class="controls" style="width:260px;">
+            <select id="select-bases" aria-label="Selecionar base"></select>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="chart-bases"></canvas></div>
+      </div>
+
+      <div class="chart-card" aria-label="Gráfico de Hospitais">
+        <div class="chart-head">
+          <h2>Hospitais</h2>
+          <div class="controls" style="width:260px;">
+            <select id="select-hosp" aria-label="Selecionar hospital"></select>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="chart-hosp"></canvas></div>
+      </div>
+
+      <aside class="summary" aria-label="Resumo">
+        <div class="info">
+          <strong>Resumo Rápido</strong>
+          <ul class="small-list" style="margin-top:8px">
+            <li><span>Total de unidades</span><span id="total-units" class="kv">—</span></li>
+            <li><span>Última atualização</span><span id="last-update" class="kv">—</span></li>
+            <li><span>Quedas (atuais)</span><span id="total-quedas" class="kv">0</span></li>
+            <li><span>Oscilações (atuais)</span><span id="total-oscs" class="kv">0</span></li>
+          </ul>
+        </div>
+
+        <div class="info">
+          <strong>Nota</strong>
+          <p style="margin:8px 0 0 0;color:var(--muted)">Clique nas legendas do gráfico para ocultar/exibir séries. Baixe o relatório para ver detalhes completos.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- footer -->
+  <footer class="site-footer" role="contentinfo" aria-label="Rodapé">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight:700;color:var(--text)">Desenvolvido por</div>
+        <div class="authors" aria-hidden="false" style="margin-top:8px">
+          <span class="author">Ruberval Batista</span>
+          <span class="author">Ruan Cavalcante</span>
+          <span class="author">Ivan Voidaleski</span>
+          <span class="author">João Victor</span>
+        </div>
+      </div>
+      <div class="right" style="text-align:right;color:var(--muted)">
+        <div class="copy">© <span id="cur-year"></span> Inovatus Sistemas</div>
+        <small style="display:block;margin-top:6px;color:var(--muted)">Projeto acadêmico · Monitoramento de unidades</small>
+      </div>
+    </div>
+  </footer>
+
+  <!-- versão (badge fixa) -->
+  <div class="app-version-badge" role="status" aria-label="Versão do sistema">Versão 1.0</div>
+
+<script>
+/* ========== Mantive sua lógica JS (Chart + fetch) ========== */
+const RETRY_MAX = 12, RETRY_DELAY_MS = 800, UPDATE_INTERVAL = 5000;
+let chartBases = null, chartHosp = null, currentBase = null, currentHosp = null;
+
+/* ---------- THEME PERSISTENCE & TOGGLE ---------- */
+const THEME_KEY = 'monit_theme';
+const themeBtn = document.getElementById('themeBtn');
+const themeIcon = document.getElementById('theme-icon');
+
+function applyTheme(theme){
+  // usamos apenas a classe light-mode — se estiver, será o tema claro
+  if(theme === 'light') document.body.classList.add('light-mode');
+  else document.body.classList.remove('light-mode');
+
+  themeIcon.textContent = (theme === 'light') ? '☀️' : '🌙';
+  themeBtn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+}
+
+/* inicializa depois do DOM carregar para evitar referências nulas */
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    // carga de preferência
+    const saved = localStorage.getItem(THEME_KEY);
+    const initial = saved === 'light' ? 'light' : 'dark';
+    applyTheme(initial);
+
+    // event listener do botão
+    themeBtn.addEventListener('click', () => {
+      const now = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+      const next = now === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+      localStorage.setItem(THEME_KEY, next);
+      setTimeout(syncChartTheme, 90);
+    });
+
+    // inicia charts e updates
+    init().catch(e => { console.error('init erro', e); });
+
+    // ano no rodapé
+    const cur = document.getElementById('cur-year');
+    if(cur) cur.textContent = (new Date()).getFullYear();
+  } catch (e){
+    console.error('DOMContentLoaded error', e);
+  }
+});
+
+/* ========== Chart + data logic (mantive a sua) ========== */
+async function fetchData(){
+  try{
+    const r = await fetch('/data',{cache:'no-store'});
+    if(!r.ok) throw new Error('status ' + r.status);
+    return await r.json();
+  }catch(e){ console.warn('fetchData erro',e); return null; }
+}
+
+function splitUnits(data){
+  const names = data && data.data ? Object.keys(data.data) : [];
+  const hosp = names.filter(n => n.trim().startsWith('Hospital'));
+  const bases = names.filter(n => !n.trim().startsWith('Hospital'));
+  return { bases, hosp };
+}
+
+function populateSelect(el,list){
+  el.innerHTML = '';
+  if(!list || !list.length){ el.innerHTML = '<option value="">— nenhum —</option>'; return; }
+  list.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; el.appendChild(o); });
+}
+
+function hexToRgba(hex, alpha){
+  if(/rgba?\(/i.test(hex)) {
+    return hex.replace('rgb(','rgba(').replace(')',`, ${alpha})`);
+  }
+  const h = hex.replace('#','');
+  const bigint = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h,16);
+  const r = (bigint>>16)&255, g = (bigint>>8)&255, b = bigint&255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function createLineChart(ctx, label, labels, values){
+  const accent = getComputedStyle(document.body).getPropertyValue('--accent') || '#2ea7ff';
+  const tc = getComputedStyle(document.body).getPropertyValue('--text') || '#e6f0f6';
+  const gc = hexToRgba(tc, 0.12);
+  return new Chart(ctx, {
+    type:'line',
+    data:{ labels: labels || [], datasets:[{ label: label||'', data: values||[], borderColor: accent, backgroundColor: hexToRgba(accent,0.06), borderWidth:2, tension:0.25, pointRadius:3, fill:true }]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color: tc } } },
+      scales:{
+        x:{ ticks:{ color: tc }, grid:{ color: gc, drawBorder:false } },
+        y:{ ticks:{ color: tc }, grid:{ color: gc }, min:0, max:1 }
+      },
+      layout:{ padding: 6 }
+    }
+  });
+}
+
+function syncChartTheme(){
+  const tc = getComputedStyle(document.body).getPropertyValue('--text') || '#e6f0f6';
+  const gc = hexToRgba(tc, 0.12);
+  [chartBases, chartHosp].forEach(c => {
+    if(!c) return;
+    if(c.options.scales?.x) c.options.scales.x.ticks.color = tc;
+    if(c.options.scales?.y) c.options.scales.y.ticks.color = tc;
+    if(c.options.scales?.x?.grid) c.options.scales.x.grid.color = gc;
+    if(c.options.scales?.y?.grid) c.options.scales.y.grid.color = gc;
+    if(c.options.plugins?.legend?.labels) c.options.plugins.legend.labels.color = tc;
+    c.update();
+  });
+}
+
+function updateChartInstance(chartInstance, label, labels, values){
+  if(!chartInstance) return;
+  chartInstance.data.labels = labels || [];
+  chartInstance.data.datasets[0].label = label || '';
+  chartInstance.data.datasets[0].data = values || [];
+  chartInstance.update();
+}
+
+async function init(){
+  let attempts = 0, data = null;
+  while(attempts < RETRY_MAX){
+    data = await fetchData();
+    if(data && data.data && Object.keys(data.data).length) break;
+    attempts++; await new Promise(r=>setTimeout(r, RETRY_DELAY_MS));
+  }
+  if(!data) return;
+
+  const { bases, hosp } = splitUnits(data);
+  const selBases = document.getElementById('select-bases');
+  const selHosp  = document.getElementById('select-hosp');
+
+  populateSelect(selBases, bases);
+  populateSelect(selHosp, hosp);
+
+  currentBase = bases[0]||null;
+  currentHosp = hosp[0]||null;
+  if(currentBase) selBases.value = currentBase;
+  if(currentHosp) selHosp.value = currentHosp;
+
+  const ctxB = document.getElementById('chart-bases').getContext('2d');
+  const ctxH = document.getElementById('chart-hosp').getContext('2d');
+
+  chartBases = createLineChart(ctxB, currentBase || 'Bases', data.timestamps || [], data.data[currentBase] || []);
+  chartHosp  = createLineChart(ctxH, currentHosp  || 'Hospitais', data.timestamps || [], data.data[currentHosp] || []);
+
+  selBases.onchange = () => { currentBase = selBases.value; updateSingleChart(currentBase, chartBases); };
+  selHosp.onchange  = () => { currentHosp = selHosp.value; updateSingleChart(currentHosp, chartHosp); };
+
+  document.getElementById('last-update').textContent = data.timestamps?.slice(-1)[0] || '—';
+  document.getElementById('total-units').textContent = Object.keys(data.data || {}).length || '—';
+
+  setInterval(periodicUpdate, UPDATE_INTERVAL);
+
+  // sincroniza tema dos charts logo após criação
+  setTimeout(syncChartTheme, 120);
+}
+
+async function updateSingleChart(unit, chartInstance){
+  if(!unit) return;
+  const data = await fetchData();
+  if(!data || !data.data) return;
+  updateChartInstance(chartInstance, unit, data.timestamps || [], data.data[unit] || []);
+}
+
+async function periodicUpdate(){
+  const data = await fetchData();
+  if(!data || !data.data) return;
+
+  const { bases, hosp } = splitUnits(data);
+  const selBases = document.getElementById('select-bases');
+  const selHosp  = document.getElementById('select-hosp');
+
+  function refresh(sel, list){
+    const curr = sel.value;
+    if(list.length !== sel.options.length){
+      populateSelect(sel, list);
+      if(list.includes(curr)) sel.value = curr;
+      else if(list.length) sel.value = list[0];
+    }
+  }
+  refresh(selBases, bases);
+  refresh(selHosp, hosp);
+
+  currentBase = selBases.value || null;
+  currentHosp = selHosp.value || null;
+
+  if(currentBase) updateChartInstance(chartBases, currentBase, data.timestamps || [], data.data[currentBase] || []);
+  if(currentHosp) updateChartInstance(chartHosp, currentHosp, data.timestamps || [], data.data[currentHosp] || []);
+
+  document.getElementById('last-update').textContent = data.timestamps?.slice(-1)[0] || '—';
+  document.getElementById('total-units').textContent = Object.keys(data.data || {}).length || '—';
+  let totalQuedas = 0, totalOscs = 0;
+  if(data.status_colors){
+    Object.values(data.status_colors).forEach(c => { if(c==='red') totalQuedas++; if(c==='yellow') totalOscs++; });
+  }
+  document.getElementById('total-quedas').textContent = totalQuedas;
+  document.getElementById('total-oscs').textContent = totalOscs;
+
+  syncChartTheme();
+}
+
+/* safety: small console hint (apenas para debug) */
+console.log('graficos.html loaded');
+</script>
+</body>
+</html>
